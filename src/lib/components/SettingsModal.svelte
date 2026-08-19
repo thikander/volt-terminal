@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { invoke } from '@tauri-apps/api/core';
 	import { getVersion } from '@tauri-apps/api/app';
+	import { listSshConfigHosts, sshHostToProfile } from '../connections';
 	import { settingsStore } from '../stores/settings.svelte';
 	import { updateStore } from '../stores/update.svelte';
-	import type { DetectedShell, Keybindings, ShellProfile, SshProfile } from '../types';
+	import type { DetectedShell, Keybindings, ShellProfile, SshHostEntry, SshProfile } from '../types';
 
 	let appVersion = $state('');
 	getVersion().then((v) => (appVersion = v));
@@ -69,6 +70,36 @@
 	function removeSshProfile(id: string) {
 		draft.ssh_profiles = draft.ssh_profiles.filter((p) => p.id !== id);
 	}
+
+	let sshConfigHosts = $state<SshHostEntry[]>([]);
+	let sshConfigLoaded = $state(false);
+	let sshConfigLoading = $state(false);
+
+	async function loadSshConfigHosts() {
+		if (sshConfigLoaded || sshConfigLoading) return;
+		sshConfigLoading = true;
+		try {
+			sshConfigHosts = await listSshConfigHosts();
+			sshConfigLoaded = true;
+		} finally {
+			sshConfigLoading = false;
+		}
+	}
+
+	function isImported(host: SshHostEntry): boolean {
+		return draft.ssh_profiles.some(
+			(p) => p.host === (host.hostname ?? host.alias) && p.user === host.user
+		);
+	}
+
+	function importSshHost(host: SshHostEntry) {
+		if (isImported(host)) return;
+		draft.ssh_profiles.push(sshHostToProfile(host));
+	}
+
+	$effect(() => {
+		if (section === 'ssh') loadSshConfigHosts();
+	});
 
 	function captureCombo(e: KeyboardEvent, field: keyof Keybindings) {
 		e.preventDefault();
@@ -157,11 +188,38 @@
 					{/each}
 				</select>
 			{:else if section === 'ssh'}
-				<h3>Saved SSH connections</h3>
+				<h3>From ~/.ssh/config</h3>
 				<p class="hint">
-					Hosts already defined in <code>~/.ssh/config</code> show up automatically in Quick Connect
-					— add one here only if you want it saved with a friendly name/group outside that file.
+					Import a host to save it as its own connection here — editable, groupable, and
+					independent of that file from then on (this is what will make sharing connections with
+					a team possible later, since the config file itself never leaves your machine).
 				</p>
+				{#if sshConfigLoading}
+					<p class="hint">Reading ~/.ssh/config…</p>
+				{:else if sshConfigHosts.length === 0}
+					<p class="hint">No hosts found in ~/.ssh/config.</p>
+				{:else}
+					{#each sshConfigHosts as host (host.alias)}
+						<div class="row config-host">
+							<div class="config-host-info">
+								<span class="config-host-alias">{host.alias}</span>
+								{#if host.user || host.hostname}
+									<span class="config-host-detail">
+										{[host.user, host.hostname].filter(Boolean).join('@')}
+									</span>
+								{/if}
+							</div>
+							<button
+								onclick={() => importSshHost(host)}
+								disabled={isImported(host)}
+							>
+								{isImported(host) ? 'Imported' : '+ Import'}
+							</button>
+						</div>
+					{/each}
+				{/if}
+
+				<h3>Your saved connections</h3>
 				{#each draft.ssh_profiles as profile (profile.id)}
 					<div class="ssh-card">
 						<div class="row">
@@ -418,6 +476,34 @@
 		border-radius: 8px;
 		padding: 8px;
 		margin-bottom: 8px;
+	}
+
+	.config-host {
+		align-items: center;
+		border: 1px solid var(--border);
+		border-radius: 6px;
+		padding: 6px 10px;
+	}
+
+	.config-host-info {
+		display: flex;
+		flex-direction: column;
+		gap: 1px;
+		min-width: 0;
+	}
+
+	.config-host-alias {
+		font-size: 13px;
+		font-weight: 600;
+	}
+
+	.config-host-detail {
+		font-size: 11px;
+		color: var(--text-dim);
+	}
+
+	.config-host button {
+		flex-shrink: 0;
 	}
 
 	button {

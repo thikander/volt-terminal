@@ -64,6 +64,26 @@ export async function listSshConfigHosts(): Promise<SshHostEntry[]> {
 	return invoke<SshHostEntry[]>('list_ssh_hosts');
 }
 
+/**
+ * Turns a `~/.ssh/config` entry into a real saved profile. A config entry
+ * only exists on whichever machine has that file — importing it is what
+ * makes a connection portable: a saved profile lives in the app's own
+ * settings, so it's the thing worth syncing/sharing later (e.g. across a
+ * team), not the local config file itself.
+ */
+export function sshHostToProfile(host: SshHostEntry): SshProfile {
+	return {
+		id: crypto.randomUUID(),
+		name: host.alias,
+		group: 'Imported',
+		host: host.hostname ?? host.alias,
+		port: host.port,
+		user: host.user,
+		identity_file: host.identity_file,
+		agent_forwarding: false
+	};
+}
+
 const RECENTS_KEY = 'volt-terminal:recent-connections';
 const MAX_RECENTS = 8;
 

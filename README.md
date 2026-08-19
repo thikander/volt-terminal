@@ -127,6 +127,14 @@ connections and `~/.ssh/config` hosts both ultimately run `ssh <target>` in a
 real PTY, so host-key prompts, passwords, and 2FA all work exactly as they
 would in a normal terminal.
 
+Settings → SSH Connections keeps the two sources visibly separate: a
+**From ~/.ssh/config** list (each with an Import button) above **Your saved
+connections** (the editable, groupable profiles you create yourself or
+import). Importing copies a config entry into a real saved profile — the
+config file only exists on whatever machine has it, so a saved profile is
+the thing that's actually portable, which matters if/when profiles become
+shareable across a team.
+
 ## Keyboard shortcuts
 
 All rebindable in Settings → Keybindings. Defaults use `Ctrl+Shift+<key>`
