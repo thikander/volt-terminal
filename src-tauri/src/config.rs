@@ -107,8 +107,8 @@ impl Default for Settings {
 
 /// Every shell the system actually has installed (PowerShell/cmd on Windows,
 /// plus Git Bash and any WSL distros if present; `/etc/shells` elsewhere),
-/// so a first launch already lists what Tabby would auto-detect instead of
-/// a hardcoded guess.
+/// so a first launch already lists what's actually usable instead of a
+/// hardcoded guess.
 fn default_profiles() -> Vec<ShellProfile> {
     let detected = shell_detect::detect();
     if detected.is_empty() {

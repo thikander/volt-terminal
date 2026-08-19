@@ -1,9 +1,9 @@
 # Volt Terminal
 
-A fast, minimal terminal emulator in the spirit of Tabby — tabs, splits,
-SSH quick-connect, and per-session shell profiles — built on a lighter stack
-for a snappier feel. Frameless custom title bar, dark theme, and a
-Tabby-style quick-connect palette that reads your real `~/.ssh/config`.
+A fast, minimal terminal emulator — tabs, splits, SSH quick-connect, and
+per-session shell profiles, built on a lighter stack for a snappier feel.
+Frameless native-feeling window, dark theme, and a quick-connect palette
+that reads your real `~/.ssh/config`.
 
 **Stack:** Tauri 2 (Rust) + SvelteKit / Svelte 5 (runes) + xterm.js
 
@@ -43,7 +43,7 @@ src/lib/
     WindowControls.svelte        Minimize / maximize / close for the frameless window
     ResizeHandles.svelte          Invisible edge/corner regions so the undecorated
                                   window can still be resized by dragging
-    QuickConnect.svelte          Tabby-style palette: recents, local profiles, saved
+    QuickConnect.svelte          Connect palette: recents, local profiles, saved
                                   SSH profiles, and live ~/.ssh/config hosts
     SplitView.svelte             Recursive renderer for the split-pane tree,
                                   with draggable resize gutters
