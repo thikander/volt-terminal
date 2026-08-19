@@ -142,6 +142,8 @@ eaten by the app instead of reaching your shell.
 | `Ctrl+Shift+D` | Split down                   |
 | `Ctrl+Shift+K` | Quick connect                |
 | `Ctrl+,`       | Open settings                |
+| `Ctrl+Tab`     | Next tab (fixed, not rebindable) |
+| `Ctrl+Shift+Tab` | Previous tab (fixed, not rebindable) |
 
 ## Extending
 

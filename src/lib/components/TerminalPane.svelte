@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
+	import { readText, writeText } from '@tauri-apps/plugin-clipboard-manager';
 	import { Terminal } from '@xterm/xterm';
 	import { FitAddon } from '@xterm/addon-fit';
 	import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -50,14 +51,14 @@
 		if (settings.copy_on_select) {
 			term.onSelectionChange(() => {
 				const selection = term.getSelection();
-				if (selection) void navigator.clipboard.writeText(selection);
+				if (selection) void writeText(selection);
 			});
 		}
 
 		if (settings.right_click_paste) {
 			container.addEventListener('contextmenu', async (e) => {
 				e.preventDefault();
-				const text = await navigator.clipboard.readText().catch(() => '');
+				const text = await readText().catch(() => '');
 				if (text) ptyBridge.write(sessionId, text);
 			});
 		}

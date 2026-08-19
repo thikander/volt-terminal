@@ -42,7 +42,10 @@
 	function onKeydown(e: KeyboardEvent) {
 		const kb = settingsStore.current.keybindings;
 
-		if (matchesCombo(e, kb.new_tab)) {
+		if (e.ctrlKey && e.key === 'Tab') {
+			e.preventDefault();
+			workspace.cycleTab(e.shiftKey ? -1 : 1);
+		} else if (matchesCombo(e, kb.new_tab)) {
 			e.preventDefault();
 			newDefaultTab();
 		} else if (matchesCombo(e, kb.close_pane)) {
@@ -80,17 +83,18 @@
 	/>
 	<UpdateBanner />
 	<div class="workspace">
-		{#if workspace.activeTab}
-			{#key workspace.activeTab.id}
+		{#each workspace.tabs as tab (tab.id)}
+			{@const isVisibleTab = tab.id === workspace.activeTabId}
+			<div class="tab-content" class:hidden={!isVisibleTab}>
 				<SplitView
-					tabId={workspace.activeTab.id}
-					node={workspace.activeTab.root}
-					activePaneId={workspace.activeTab.activePaneId}
+					tabId={tab.id}
+					node={tab.root}
+					activePaneId={isVisibleTab ? tab.activePaneId : ''}
 				/>
-			{/key}
+			</div>
 		{:else}
 			<div class="empty">No terminals open — press Ctrl+Shift+T to start one.</div>
-		{/if}
+		{/each}
 	</div>
 </div>
 
@@ -116,9 +120,19 @@
 	}
 
 	.workspace {
+		position: relative;
 		flex: 1;
 		min-height: 0;
 		background: var(--bg);
+	}
+
+	.tab-content {
+		position: absolute;
+		inset: 0;
+	}
+
+	.tab-content.hidden {
+		display: none;
 	}
 
 	.empty {

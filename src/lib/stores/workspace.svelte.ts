@@ -80,6 +80,13 @@ class WorkspaceStore {
 		this.activeTabId = tabId;
 	}
 
+	cycleTab(direction: 1 | -1) {
+		if (this.tabs.length < 2) return;
+		const index = this.tabs.findIndex((t) => t.id === this.activeTabId);
+		const next = (index + direction + this.tabs.length) % this.tabs.length;
+		this.activeTabId = this.tabs[next].id;
+	}
+
 	setActivePane(tabId: string, paneId: string) {
 		const tab = this.tabs.find((t) => t.id === tabId);
 		if (tab) tab.activePaneId = paneId;
