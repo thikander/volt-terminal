@@ -1,0 +1,110 @@
+<script lang="ts">
+	import { onDestroy, onMount } from 'svelte';
+	import { Terminal } from '@xterm/xterm';
+	import { FitAddon } from '@xterm/addon-fit';
+	import { WebLinksAddon } from '@xterm/addon-web-links';
+	import '@xterm/xterm/css/xterm.css';
+	import { ptyBridge } from '../pty-bridge';
+	import { settingsStore } from '../stores/settings.svelte';
+	import { workspace } from '../stores/workspace.svelte';
+	import { themeWithOpacity } from '../theme';
+	import type { LeafPane } from '../types';
+
+	let { tabId, pane, active }: { tabId: string; pane: LeafPane; active: boolean } = $props();
+
+	let container: HTMLDivElement;
+	let term: Terminal;
+	let fitAddon: FitAddon;
+	let resizeObserver: ResizeObserver;
+
+	onMount(async () => {
+		const settings = settingsStore.current;
+		term = new Terminal({
+			fontFamily: settings.font_family,
+			fontSize: settings.font_size,
+			lineHeight: settings.line_height,
+			cursorStyle: settings.cursor_style,
+			cursorBlink: settings.cursor_blink,
+			scrollback: settings.scrollback,
+			rightClickSelectsWord: !settings.right_click_paste,
+			theme: themeWithOpacity(settings.background_opacity),
+			allowProposedApi: true
+		});
+		fitAddon = new FitAddon();
+		term.loadAddon(fitAddon);
+		term.loadAddon(new WebLinksAddon());
+		term.open(container);
+		fitAddon.fit();
+
+		const sessionId = await ptyBridge.spawn(pane.spawn, term.cols, term.rows);
+		workspace.setPaneSession(tabId, pane.id, sessionId);
+
+		ptyBridge.onOutput(sessionId, (data) => term.write(data));
+		ptyBridge.onExit(sessionId, () => {
+			term.write('\r\n\x1b[90m[process exited]\x1b[0m\r\n');
+		});
+
+		term.onData((data) => ptyBridge.write(sessionId, data));
+		term.onResize(({ cols, rows }) => ptyBridge.resize(sessionId, cols, rows));
+
+		if (settings.copy_on_select) {
+			term.onSelectionChange(() => {
+				const selection = term.getSelection();
+				if (selection) void navigator.clipboard.writeText(selection);
+			});
+		}
+
+		if (settings.right_click_paste) {
+			container.addEventListener('contextmenu', async (e) => {
+				e.preventDefault();
+				const text = await navigator.clipboard.readText().catch(() => '');
+				if (text) ptyBridge.write(sessionId, text);
+			});
+		}
+
+		resizeObserver = new ResizeObserver(() => fitAddon.fit());
+		resizeObserver.observe(container);
+
+		if (active) term.focus();
+	});
+
+	onDestroy(() => {
+		resizeObserver?.disconnect();
+		term?.dispose();
+	});
+
+	$effect(() => {
+		if (active) term?.focus();
+	});
+
+	export function fit() {
+		fitAddon?.fit();
+	}
+</script>
+
+<div
+	class="terminal-pane"
+	class:active
+	bind:this={container}
+	onmousedown={() => workspace.setActivePane(tabId, pane.id)}
+	role="presentation"
+></div>
+
+<style>
+	.terminal-pane {
+		width: 100%;
+		height: 100%;
+		padding: 6px 0 0 8px;
+		box-sizing: border-box;
+		overflow: hidden;
+		border: 1px solid transparent;
+	}
+
+	.terminal-pane.active {
+		border-color: var(--accent);
+	}
+
+	.terminal-pane :global(.xterm) {
+		height: 100%;
+	}
+</style>
