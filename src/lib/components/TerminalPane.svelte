@@ -7,16 +7,20 @@
 	import '@xterm/xterm/css/xterm.css';
 	import { ptyBridge } from '../pty-bridge';
 	import { settingsStore } from '../stores/settings.svelte';
+	import { dockerPanel } from '../stores/docker-panel.svelte';
 	import { workspace } from '../stores/workspace.svelte';
 	import { themeWithOpacity } from '../theme';
 	import type { LeafPane } from '../types';
 
 	let { tabId, pane, active }: { tabId: string; pane: LeafPane; active: boolean } = $props();
 
+	const dockerStatus = $derived(dockerPanel.stateFor(pane.id).status);
+
 	let container: HTMLDivElement;
 	let term: Terminal;
 	let fitAddon: FitAddon;
 	let resizeObserver: ResizeObserver;
+	let unsubscribeOutput: (() => void) | undefined;
 
 	onMount(async () => {
 		const settings = settingsStore.current;
@@ -40,7 +44,11 @@
 		const sessionId = await ptyBridge.spawn(pane.spawn, term.cols, term.rows);
 		workspace.setPaneSession(tabId, pane.id, sessionId);
 
-		ptyBridge.onOutput(sessionId, (data) => term.write(data));
+		// Give the shell a moment to print its first prompt before scanning,
+		// so the detection command doesn't race the shell's own startup output.
+		setTimeout(() => dockerPanel.scan(pane.id, sessionId, pane.spawn.command), 900);
+
+		unsubscribeOutput = ptyBridge.subscribeOutput(sessionId, (data) => term.write(data));
 		ptyBridge.onExit(sessionId, () => {
 			term.write('\r\n\x1b[90m[process exited]\x1b[0m\r\n');
 		});
@@ -71,6 +79,7 @@
 
 	onDestroy(() => {
 		resizeObserver?.disconnect();
+		unsubscribeOutput?.();
 		term?.dispose();
 	});
 
@@ -83,15 +92,52 @@
 	}
 </script>
 
-<div
-	class="terminal-pane"
-	class:active
-	bind:this={container}
-	onmousedown={() => workspace.setActivePane(tabId, pane.id)}
-	role="presentation"
-></div>
+<div class="pane-wrapper">
+	<div
+		class="terminal-pane"
+		class:active
+		bind:this={container}
+		onmousedown={() => workspace.setActivePane(tabId, pane.id)}
+		role="presentation"
+	></div>
+	{#if dockerStatus === 'available'}
+		<button
+			class="docker-btn"
+			onclick={() => dockerPanel.open(pane.id)}
+			title="Open Docker Compose panel"
+		>
+			🐳
+		</button>
+	{/if}
+</div>
 
 <style>
+	.pane-wrapper {
+		position: relative;
+		width: 100%;
+		height: 100%;
+	}
+
+	.docker-btn {
+		position: absolute;
+		top: 8px;
+		right: 10px;
+		z-index: 5;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: 6px;
+		width: 28px;
+		height: 28px;
+		font-size: 14px;
+		cursor: pointer;
+		opacity: 0.75;
+	}
+
+	.docker-btn:hover {
+		opacity: 1;
+		border-color: var(--accent);
+	}
+
 	.terminal-pane {
 		width: 100%;
 		height: 100%;

@@ -18,19 +18,24 @@ type ExitHandler = (code: number) => void;
 /**
  * Single global listener that fans events out to whichever pane owns a
  * given session id, so we never register one Tauri listener per terminal.
+ *
+ * Output has multiple subscribers per session (the terminal's own display,
+ * plus anything transiently "tapping" the stream — e.g. capturing the
+ * output of one injected command) rather than one handler, so a feature
+ * like that can listen in without stealing the terminal's own feed.
  */
 class PtyBridge {
-	private outputHandlers = new Map<string, OutputHandler>();
-	private exitHandlers = new Map<string, ExitHandler>();
+	private outputHandlers = new Map<string, Set<OutputHandler>>();
+	private exitHandlers = new Map<string, Set<ExitHandler>>();
 	private ready: Promise<void>;
 
 	constructor() {
 		this.ready = Promise.all([
 			listen<PtyOutputEvent>('pty-output', (event) => {
-				this.outputHandlers.get(event.payload.id)?.(event.payload.data);
+				this.outputHandlers.get(event.payload.id)?.forEach((h) => h(event.payload.data));
 			}),
 			listen<PtyExitEvent>('pty-exit', (event) => {
-				this.exitHandlers.get(event.payload.id)?.(event.payload.code);
+				this.exitHandlers.get(event.payload.id)?.forEach((h) => h(event.payload.code));
 				this.outputHandlers.delete(event.payload.id);
 				this.exitHandlers.delete(event.payload.id);
 			})
@@ -48,12 +53,24 @@ class PtyBridge {
 		});
 	}
 
-	onOutput(sessionId: string, handler: OutputHandler) {
-		this.outputHandlers.set(sessionId, handler);
+	/** Subscribes to a session's output; returns a function to unsubscribe. */
+	subscribeOutput(sessionId: string, handler: OutputHandler): () => void {
+		let handlers = this.outputHandlers.get(sessionId);
+		if (!handlers) {
+			handlers = new Set();
+			this.outputHandlers.set(sessionId, handlers);
+		}
+		handlers.add(handler);
+		return () => handlers!.delete(handler);
 	}
 
 	onExit(sessionId: string, handler: ExitHandler) {
-		this.exitHandlers.set(sessionId, handler);
+		let handlers = this.exitHandlers.get(sessionId);
+		if (!handlers) {
+			handlers = new Set();
+			this.exitHandlers.set(sessionId, handlers);
+		}
+		handlers.add(handler);
 	}
 
 	write(sessionId: string, data: string) {

@@ -6,6 +6,7 @@
 	import QuickConnect from '$lib/components/QuickConnect.svelte';
 	import ResizeHandles from '$lib/components/ResizeHandles.svelte';
 	import UpdateBanner from '$lib/components/UpdateBanner.svelte';
+	import DockerPanel from '$lib/components/DockerPanel.svelte';
 	import { fromShellProfile, type ConnectionTarget } from '$lib/connections';
 	import { matchesCombo } from '$lib/keys';
 	import { settingsStore } from '$lib/stores/settings.svelte';
@@ -95,6 +96,7 @@
 		{:else}
 			<div class="empty">No terminals open — press Ctrl+Shift+T to start one.</div>
 		{/each}
+		<DockerPanel />
 	</div>
 </div>
 
