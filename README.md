@@ -29,14 +29,6 @@ src/lib/
                                 address into a SpawnSpec; recent-connections persistence
   pty-bridge.ts                 Single global event listener that fans pty-output/
                                 pty-exit events out to the owning pane by session id
-                                (multiple subscribers per session — the terminal's
-                                own display plus anything transiently "tapping" it)
-  docker.ts                     Docker Compose detection/read/write by injecting real
-                                commands into the pane's own PTY and scraping the
-                                output between unique markers — works identically for
-                                local shells and remote SSH sessions
-  compose-model.ts               Normalizes docker-compose's loosely-typed YAML schema
-                                into a flat editable shape, and serializes it back
   keys.ts                       Matches a KeyboardEvent against a "Ctrl+Shift+T"-style combo
   theme.ts                      xterm.js color theme
   stores/settings.svelte.ts     Settings state (Svelte 5 class + runes)
@@ -45,8 +37,6 @@ src/lib/
                                  title bar (dimming) and window controls (icon)
   stores/update.svelte.ts       Wraps @tauri-apps/plugin-updater: check /
                                  download / install-and-relaunch state machine
-  stores/docker-panel.svelte.ts Per-pane compose detection state + the open panel's
-                                 editable model
   components/
     TitleBar.svelte             Frameless custom title bar (tabs + window controls)
     TabBar.svelte                Tab strip
@@ -55,7 +45,6 @@ src/lib/
                                   window can still be resized by dragging
     QuickConnect.svelte          Connect palette: recents, local profiles, saved
                                   SSH profiles, and live ~/.ssh/config hosts
-    DockerPanel.svelte           Compose editor side panel + docker command shortcuts
     SplitView.svelte             Recursive renderer for the split-pane tree,
                                   with draggable resize gutters
     TerminalPane.svelte          Owns one xterm.js instance + its PTY session
@@ -137,33 +126,6 @@ Every successful connection is remembered under "Recent". Saved SSH
 connections and `~/.ssh/config` hosts both ultimately run `ssh <target>` in a
 real PTY, so host-key prompts, passwords, and 2FA all work exactly as they
 would in a normal terminal.
-
-## Docker Compose
-
-Shortly after any tab opens, it checks that shell's current directory for
-`docker-compose.yml` / `docker-compose.yaml` / `compose.yml` / `compose.yaml`.
-If one's there, a 🐳 button appears in the top-right corner of that pane —
-click it to open a side panel with:
-
-- **Shortcut buttons** for `up -d`, `down`, `restart`, `build`, `pull`, `ps`,
-  and `logs -f` — each just runs `docker compose <command>` in that pane, as
-  visibly as if you'd typed it.
-- **A form editor** per service (image, build context, ports, volumes,
-  environment variables, restart policy, container name, command) — edit
-  with inputs instead of hand-editing YAML, then "Save" writes it back.
-
-This works identically whether the shell is local or a remote SSH session —
-there's no separate file-transfer step. Reading and writing both go through
-the same PTY you're already looking at: a real command runs, its output is
-scraped between two unique markers, and the result is parsed. It's
-transparent by design, not a hidden background process — you're not intended
-to be surprised by what appears in your terminal.
-
-**Known limits:** detection is a one-time snapshot when the tab opens (use
-the panel's rescan if you `cd` into a different project afterward); only
-POSIX shells (bash/sh — covers SSH, WSL, Git Bash) and PowerShell are
-supported, not raw `cmd.exe`; and saving re-serializes the whole file, so
-comments and formatting from hand-written YAML won't survive a round trip.
 
 ## Keyboard shortcuts
 
