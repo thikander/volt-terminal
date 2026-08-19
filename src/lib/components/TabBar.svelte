@@ -5,20 +5,24 @@
 	let { onNewTab, onQuickConnect }: { onNewTab: () => void; onQuickConnect: () => void } =
 		$props();
 
-	function rootCommand(node: PaneNode): string {
-		return node.kind === 'leaf' ? node.spawn.command : rootCommand(node.children[0]);
+	function rootLeaf(node: PaneNode): Extract<PaneNode, { kind: 'leaf' }> {
+		return node.kind === 'leaf' ? node : rootLeaf(node.children[0]);
 	}
 </script>
 
 <div class="tab-bar" data-tauri-drag-region>
 	<div class="tabs">
 		{#each workspace.tabs as tab (tab.id)}
+			{@const leaf = rootLeaf(tab.root)}
 			<button
 				class="tab"
 				class:active={tab.id === workspace.activeTabId}
+				style:box-shadow={tab.id === workspace.activeTabId && leaf.spawn.color
+					? `inset 0 -2px 0 ${leaf.spawn.color}`
+					: undefined}
 				onclick={() => workspace.setActiveTab(tab.id)}
 			>
-				<span class="icon">{rootCommand(tab.root) === 'ssh' ? '⇄' : '›_'}</span>
+				<span class="icon" style:color={leaf.spawn.color}>{leaf.spawn.icon || '›_'}</span>
 				<span class="title">{tab.title}</span>
 				<span
 					class="close"

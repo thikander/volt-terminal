@@ -42,7 +42,11 @@
 
 		ptyBridge.onOutput(sessionId, (data) => term.write(data));
 		ptyBridge.onExit(sessionId, () => {
-			term.write('\r\n\x1b[90m[process exited]\x1b[0m\r\n');
+			if (pane.spawn.closeOnExit) {
+				workspace.closePane(tabId, pane.id);
+			} else {
+				term.write('\r\n\x1b[90m[process exited]\x1b[0m\r\n');
+			}
 		});
 
 		term.onData((data) => ptyBridge.write(sessionId, data));
@@ -86,6 +90,7 @@
 <div
 	class="terminal-pane"
 	class:active
+	style:border-color={active ? (pane.spawn.color ?? 'var(--accent)') : undefined}
 	bind:this={container}
 	onmousedown={() => workspace.setActivePane(tabId, pane.id)}
 	role="presentation"

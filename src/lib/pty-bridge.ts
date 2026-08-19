@@ -44,7 +44,8 @@ class PtyBridge {
 			args: spec.args,
 			cwd: spec.cwd ?? null,
 			cols,
-			rows
+			rows,
+			env: spec.env ?? null
 		});
 	}
 

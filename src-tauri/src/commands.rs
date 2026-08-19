@@ -16,8 +16,9 @@ pub fn spawn_session(
     cwd: Option<String>,
     cols: u16,
     rows: u16,
+    env: Option<HashMap<String, String>>,
 ) -> Result<String, String> {
-    pty.spawn(app, shell, args, cwd, cols, rows, HashMap::new())
+    pty.spawn(app, shell, args, cwd, cols, rows, env.unwrap_or_default())
 }
 
 #[tauri::command]

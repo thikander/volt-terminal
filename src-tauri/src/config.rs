@@ -7,6 +7,12 @@ use tauri::{AppHandle, Manager};
 use crate::shell_detect;
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct EnvVar {
+    pub key: String,
+    pub value: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ShellProfile {
     pub id: String,
     pub name: String,
@@ -16,6 +22,14 @@ pub struct ShellProfile {
     pub cwd: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub group: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub icon: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub color: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub env: Option<Vec<EnvVar>>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub close_on_exit: Option<bool>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -33,6 +47,12 @@ pub struct SshProfile {
     pub identity_file: Option<String>,
     #[serde(default)]
     pub agent_forwarding: bool,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub icon: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub color: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub close_on_exit: Option<bool>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -119,6 +139,10 @@ fn default_profiles() -> Vec<ShellProfile> {
             args: vec![],
             cwd: None,
             group: None,
+            icon: None,
+            color: None,
+            env: None,
+            close_on_exit: None,
         }];
     }
 
@@ -132,6 +156,10 @@ fn default_profiles() -> Vec<ShellProfile> {
             args: shell.args,
             cwd: None,
             group: None,
+            icon: None,
+            color: None,
+            env: None,
+            close_on_exit: None,
         })
         .collect()
 }

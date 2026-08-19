@@ -115,9 +115,7 @@
 						onmouseenter={() => (selected = index)}
 						onclick={() => choose(item)}
 					>
-						<span class="icon" class:ssh={item.icon === 'ssh'}>
-							{item.icon === 'ssh' ? '⇄' : '›_'}
-						</span>
+						<span class="icon" style:color={item.color}>{item.icon}</span>
 						<span class="label">{item.label}</span>
 						{#if item.subtitle}
 							<span class="subtitle">{item.subtitle}</span>

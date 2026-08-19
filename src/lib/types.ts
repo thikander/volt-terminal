@@ -1,3 +1,8 @@
+export interface EnvVar {
+	key: string;
+	value: string;
+}
+
 export interface ShellProfile {
 	id: string;
 	name: string;
@@ -5,6 +10,10 @@ export interface ShellProfile {
 	args: string[];
 	cwd?: string;
 	group?: string;
+	icon?: string;
+	color?: string;
+	env?: EnvVar[];
+	close_on_exit?: boolean;
 }
 
 export interface SshProfile {
@@ -16,6 +25,9 @@ export interface SshProfile {
 	user?: string;
 	identity_file?: string;
 	agent_forwarding: boolean;
+	icon?: string;
+	color?: string;
+	close_on_exit?: boolean;
 }
 
 export interface DetectedShell {
@@ -65,6 +77,10 @@ export interface SpawnSpec {
 	command: string;
 	args: string[];
 	cwd?: string;
+	env?: Record<string, string>;
+	closeOnExit?: boolean;
+	icon?: string;
+	color?: string;
 }
 
 export type SplitDirection = 'row' | 'column';

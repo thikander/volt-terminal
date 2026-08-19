@@ -1,12 +1,22 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { ShellProfile, SshHostEntry, SshProfile, SpawnSpec } from './types';
+import type { EnvVar, ShellProfile, SshHostEntry, SshProfile, SpawnSpec } from './types';
 
 export interface ConnectionTarget {
 	label: string;
 	subtitle?: string;
 	group: string;
-	icon: 'terminal' | 'ssh';
+	icon: string;
+	color?: string;
 	spawn: SpawnSpec;
+}
+
+const DEFAULT_TERMINAL_ICON = '›_';
+const DEFAULT_SSH_ICON = '⇄';
+
+function envToRecord(env: EnvVar[] | undefined): Record<string, string> | undefined {
+	if (!env?.length) return undefined;
+	const entries = env.filter((e) => e.key).map((e): [string, string] => [e.key, e.value]);
+	return entries.length ? Object.fromEntries(entries) : undefined;
 }
 
 export function fromShellProfile(profile: ShellProfile): ConnectionTarget {
@@ -14,8 +24,17 @@ export function fromShellProfile(profile: ShellProfile): ConnectionTarget {
 		label: profile.name,
 		subtitle: profile.command,
 		group: profile.group ?? 'Local',
-		icon: 'terminal',
-		spawn: { command: profile.command, args: profile.args, cwd: profile.cwd }
+		icon: profile.icon || DEFAULT_TERMINAL_ICON,
+		color: profile.color,
+		spawn: {
+			command: profile.command,
+			args: profile.args,
+			cwd: profile.cwd,
+			env: envToRecord(profile.env),
+			closeOnExit: profile.close_on_exit,
+			icon: profile.icon || DEFAULT_TERMINAL_ICON,
+			color: profile.color
+		}
 	};
 }
 
@@ -24,12 +43,14 @@ export function fromSshProfile(profile: SshProfile): ConnectionTarget {
 	const args = ['-p', String(profile.port ?? 22), address];
 	if (profile.identity_file) args.push('-i', profile.identity_file);
 	if (profile.agent_forwarding) args.push('-A');
+	const icon = profile.icon || DEFAULT_SSH_ICON;
 	return {
 		label: profile.name,
 		subtitle: address,
 		group: profile.group ?? 'SSH',
-		icon: 'ssh',
-		spawn: { command: 'ssh', args }
+		icon,
+		color: profile.color,
+		spawn: { command: 'ssh', args, closeOnExit: profile.close_on_exit, icon, color: profile.color }
 	};
 }
 
@@ -40,8 +61,8 @@ export function fromSshConfigHost(host: SshHostEntry): ConnectionTarget {
 		group: 'SSH Config (~/.ssh/config)',
 		// Let the system ssh client resolve the alias — it already reads
 		// this file, including options we don't parse (ProxyJump, Include...).
-		icon: 'ssh',
-		spawn: { command: 'ssh', args: [host.alias] }
+		icon: DEFAULT_SSH_ICON,
+		spawn: { command: 'ssh', args: [host.alias], icon: DEFAULT_SSH_ICON }
 	};
 }
 
@@ -49,8 +70,8 @@ export function fromAddress(address: string): ConnectionTarget {
 	return {
 		label: address,
 		group: 'Quick Connect',
-		icon: 'ssh',
-		spawn: { command: 'ssh', args: [address] }
+		icon: DEFAULT_SSH_ICON,
+		spawn: { command: 'ssh', args: [address], icon: DEFAULT_SSH_ICON }
 	};
 }
 

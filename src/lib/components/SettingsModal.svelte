@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { invoke } from '@tauri-apps/api/core';
 	import { getVersion } from '@tauri-apps/api/app';
+	import { open } from '@tauri-apps/plugin-dialog';
 	import { listSshConfigHosts, sshHostToProfile } from '../connections';
 	import { settingsStore } from '../stores/settings.svelte';
 	import { updateStore } from '../stores/update.svelte';
@@ -18,6 +19,22 @@
 	let detecting = $state(false);
 	let detectMessage = $state('');
 
+	let profileFilter = $state('');
+	let sshFilter = $state('');
+
+	let filteredProfiles = $derived(
+		draft.profiles.filter((p) => matchesFilter(profileFilter, p.name, p.command, p.group))
+	);
+	let filteredSshProfiles = $derived(
+		draft.ssh_profiles.filter((p) => matchesFilter(sshFilter, p.name, p.host, p.group))
+	);
+
+	function matchesFilter(filter: string, ...fields: (string | undefined)[]): boolean {
+		const q = filter.trim().toLowerCase();
+		if (!q) return true;
+		return fields.some((f) => f?.toLowerCase().includes(q));
+	}
+
 	function addProfile() {
 		const profile: ShellProfile = {
 			id: crypto.randomUUID(),
@@ -30,6 +47,23 @@
 
 	function removeProfile(id: string) {
 		draft.profiles = draft.profiles.filter((p) => p.id !== id);
+	}
+
+	function duplicateProfile(profile: ShellProfile) {
+		draft.profiles.push({
+			...structuredClone($state.snapshot(profile)),
+			id: crypto.randomUUID(),
+			name: `${profile.name} copy`
+		});
+	}
+
+	function addEnvVar(profile: ShellProfile) {
+		profile.env = [...(profile.env ?? []), { key: '', value: '' }];
+	}
+
+	async function browseCwd(profile: ShellProfile) {
+		const dir = await open({ directory: true, multiple: false });
+		if (typeof dir === 'string') profile.cwd = dir;
 	}
 
 	async function detectShells() {
@@ -69,6 +103,14 @@
 
 	function removeSshProfile(id: string) {
 		draft.ssh_profiles = draft.ssh_profiles.filter((p) => p.id !== id);
+	}
+
+	function duplicateSshProfile(profile: SshProfile) {
+		draft.ssh_profiles.push({
+			...structuredClone($state.snapshot(profile)),
+			id: crypto.randomUUID(),
+			name: `${profile.name} copy`
+		});
 	}
 
 	let sshConfigHosts = $state<SshHostEntry[]>([]);
@@ -163,13 +205,76 @@
 		<div class="content">
 			{#if section === 'profiles'}
 				<h3>Local shell profiles</h3>
-				{#each draft.profiles as profile (profile.id)}
-					<div class="row">
-						<input bind:value={profile.name} placeholder="Name" />
-						<input bind:value={profile.command} placeholder="Command (e.g. powershell.exe)" />
-						<input bind:value={profile.group} placeholder="Group (optional)" />
-						<button class="danger" onclick={() => removeProfile(profile.id)}>Remove</button>
-					</div>
+				<input class="filter" bind:value={profileFilter} placeholder="Filter profiles…" />
+				{#each filteredProfiles as profile (profile.id)}
+					<details class="profile-card">
+						<summary>
+							<span class="profile-icon" style:color={profile.color}
+								>{profile.icon || '›_'}</span
+							>
+							<span class="profile-name">{profile.name}</span>
+							<span class="profile-sub">{profile.command}</span>
+							<span class="card-actions">
+								<button
+									type="button"
+									class="ghost"
+									onclick={(e) => {
+										e.preventDefault();
+										e.stopPropagation();
+										duplicateProfile(profile);
+									}}
+								>
+									Duplicate
+								</button>
+								<button
+									type="button"
+									class="danger"
+									onclick={(e) => {
+										e.preventDefault();
+										e.stopPropagation();
+										removeProfile(profile.id);
+									}}
+								>
+									Remove
+								</button>
+							</span>
+						</summary>
+
+						<div class="row">
+							<input bind:value={profile.name} placeholder="Name" />
+							<input bind:value={profile.command} placeholder="Command (e.g. powershell.exe)" />
+							<input bind:value={profile.group} placeholder="Group (optional)" />
+						</div>
+						<div class="row">
+							<input bind:value={profile.icon} placeholder="Icon (emoji)" class="narrow" />
+							<input type="color" bind:value={profile.color} class="narrow" />
+							<label class="checkbox">
+								<input type="checkbox" bind:checked={profile.close_on_exit} />
+								Close tab when process exits
+							</label>
+						</div>
+						<div class="row">
+							<input bind:value={profile.cwd} placeholder="Working directory (optional)" />
+							<button type="button" onclick={() => browseCwd(profile)}>Browse…</button>
+						</div>
+						<div class="list-field">
+							<span class="list-label">Environment variables</span>
+							{#each profile.env ?? [] as env, i (i)}
+								<div class="list-row">
+									<input bind:value={env.key} placeholder="KEY" class="env-key" />
+									<input bind:value={env.value} placeholder="value" />
+									<button
+										type="button"
+										class="danger"
+										onclick={() => profile.env?.splice(i, 1)}
+									>
+										×
+									</button>
+								</div>
+							{/each}
+							<button type="button" onclick={() => addEnvVar(profile)}>+ Add variable</button>
+						</div>
+					</details>
 				{/each}
 				<div class="row">
 					<button onclick={addProfile}>+ Add profile</button>
@@ -181,7 +286,7 @@
 					<p class="hint">{detectMessage}</p>
 				{/if}
 
-				<h3>Default profile</h3>
+				<h3>Default profile for new tabs</h3>
 				<select bind:value={draft.default_profile_id}>
 					{#each draft.profiles as profile (profile.id)}
 						<option value={profile.id}>{profile.name}</option>
@@ -220,12 +325,21 @@
 				{/if}
 
 				<h3>Your saved connections</h3>
-				{#each draft.ssh_profiles as profile (profile.id)}
+				<input class="filter" bind:value={sshFilter} placeholder="Filter connections…" />
+				{#each filteredSshProfiles as profile (profile.id)}
 					<div class="ssh-card">
 						<div class="row">
+							<span class="profile-icon" style:color={profile.color}
+								>{profile.icon || '⇄'}</span
+							>
 							<input bind:value={profile.name} placeholder="Name" />
 							<input bind:value={profile.group} placeholder="Group (optional)" />
-							<button class="danger" onclick={() => removeSshProfile(profile.id)}>Remove</button>
+							<button type="button" class="ghost" onclick={() => duplicateSshProfile(profile)}>
+								Duplicate
+							</button>
+							<button type="button" class="danger" onclick={() => removeSshProfile(profile.id)}>
+								Remove
+							</button>
 						</div>
 						<div class="row">
 							<input bind:value={profile.host} placeholder="Host or IP" />
@@ -242,6 +356,14 @@
 							<label class="checkbox">
 								<input type="checkbox" bind:checked={profile.agent_forwarding} />
 								Agent forwarding
+							</label>
+						</div>
+						<div class="row">
+							<input bind:value={profile.icon} placeholder="Icon (emoji)" class="narrow" />
+							<input type="color" bind:value={profile.color} class="narrow" />
+							<label class="checkbox">
+								<input type="checkbox" bind:checked={profile.close_on_exit} />
+								Close tab when connection ends
 							</label>
 						</div>
 					</div>
@@ -460,6 +582,12 @@
 		width: 70px;
 	}
 
+	input[type='color'] {
+		width: 44px;
+		padding: 2px;
+		flex: 0 0 auto;
+	}
+
 	.row {
 		display: flex;
 		gap: 6px;
@@ -476,6 +604,72 @@
 		border-radius: 8px;
 		padding: 8px;
 		margin-bottom: 8px;
+	}
+
+	.filter {
+		width: 100%;
+		margin-bottom: 10px;
+	}
+
+	.profile-card {
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		padding: 8px 10px;
+		margin-bottom: 8px;
+	}
+
+	.profile-card summary {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		cursor: pointer;
+		list-style: none;
+		font-size: 13px;
+	}
+
+	.profile-card summary::-webkit-details-marker {
+		display: none;
+	}
+
+	.profile-card[open] summary {
+		margin-bottom: 8px;
+	}
+
+	.profile-icon {
+		font-family: monospace;
+		font-size: 13px;
+		width: 18px;
+		text-align: center;
+		flex-shrink: 0;
+	}
+
+	.profile-name {
+		font-weight: 600;
+	}
+
+	.profile-sub {
+		color: var(--text-dim);
+		font-size: 11px;
+		flex: 1;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.card-actions {
+		display: flex;
+		gap: 6px;
+		flex-shrink: 0;
+	}
+
+	button.ghost {
+		background: transparent;
+		color: var(--text-dim);
+	}
+
+	button.ghost:hover {
+		color: var(--text);
+		background: var(--border);
 	}
 
 	.config-host {

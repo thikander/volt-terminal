@@ -135,6 +135,26 @@ config file only exists on whatever machine has it, so a saved profile is
 the thing that's actually portable, which matters if/when profiles become
 shareable across a team.
 
+## Profiles
+
+Both local shell profiles and SSH connections (Settings → Profiles /
+SSH Connections) support:
+
+- a **filter box** to search by name, command/host, or group
+- a custom **icon** (any emoji) and **color**, shown in the tab bar and
+  Quick Connect
+- **Duplicate**, not just Remove
+- **close the tab automatically when the process/connection ends**, instead
+  of leaving a `[process exited]` message behind
+
+Local shell profiles additionally support a **working directory** (with a
+native folder picker) and **environment variables**.
+
+Not built (out of scope for now, unlike some other terminal apps): an
+encrypted secrets vault, cloud config sync, a plugin system, and
+serial/Telnet connection types — these are much larger, separate features
+in their own right rather than natural extensions of profile editing.
+
 ## Keyboard shortcuts
 
 All rebindable in Settings → Keybindings. Defaults use `Ctrl+Shift+<key>`
