@@ -132,7 +132,13 @@
 	}
 
 	.tab-content.hidden {
-		display: none;
+		/* Not display:none: that collapses the box to 0x0, which spuriously
+		   triggers xterm's ResizeObserver-driven refit on every switch back
+		   (and the resulting re-layout/repaint is what shows up as a flicker).
+		   visibility:hidden keeps the box's real layout size at all times, so
+		   switching tabs never changes any pane's measured size at all. */
+		visibility: hidden;
+		pointer-events: none;
 	}
 
 	.empty {
