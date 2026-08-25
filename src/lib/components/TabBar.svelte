@@ -1,4 +1,6 @@
 <script lang="ts">
+	import IconGlyph from './IconGlyph.svelte';
+	import { t } from '../i18n';
 	import { workspace } from '../stores/workspace.svelte';
 	import type { PaneNode } from '../types';
 
@@ -22,7 +24,9 @@
 					: undefined}
 				onclick={() => workspace.setActiveTab(tab.id)}
 			>
-				<span class="icon" style:color={leaf.spawn.color}>{leaf.spawn.icon || '›_'}</span>
+				<span class="icon" style:color={leaf.spawn.color}>
+					<IconGlyph icon={leaf.spawn.icon} fallback="›_" />
+				</span>
 				<span class="title">{tab.title}</span>
 				<span
 					class="close"
@@ -44,8 +48,8 @@
 			</button>
 		{/each}
 	</div>
-	<button class="icon-btn" onclick={onNewTab} title="New tab (default profile)">+</button>
-	<button class="icon-btn" onclick={onQuickConnect} title="Quick connect / new SSH tab">▾</button>
+	<button class="icon-btn" onclick={onNewTab} title={t('new_tab_tooltip')}>+</button>
+	<button class="icon-btn" onclick={onQuickConnect} title={t('quick_connect_tooltip')}>▾</button>
 </div>
 
 <style>
@@ -91,6 +95,10 @@
 		font-family: monospace;
 		font-size: 11px;
 		opacity: 0.8;
+		flex-shrink: 0;
+		max-width: 24px;
+		overflow: hidden;
+		white-space: nowrap;
 	}
 
 	.title {

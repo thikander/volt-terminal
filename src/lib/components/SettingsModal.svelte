@@ -3,9 +3,18 @@
 	import { getVersion } from '@tauri-apps/api/app';
 	import { open } from '@tauri-apps/plugin-dialog';
 	import { listSshConfigHosts, sshHostToProfile } from '../connections';
+	import { t } from '../i18n';
 	import { settingsStore } from '../stores/settings.svelte';
 	import { updateStore } from '../stores/update.svelte';
-	import type { DetectedShell, Keybindings, ShellProfile, SshHostEntry, SshProfile } from '../types';
+	import IconGlyph from './IconGlyph.svelte';
+	import type {
+		DetectedShell,
+		Keybindings,
+		Language,
+		ShellProfile,
+		SshHostEntry,
+		SshProfile
+	} from '../types';
 
 	let appVersion = $state('');
 	getVersion().then((v) => (appVersion = v));
@@ -13,9 +22,9 @@
 	let { onClose }: { onClose: () => void } = $props();
 
 	let draft = $state(structuredClone($state.snapshot(settingsStore.current)));
-	let section = $state<'profiles' | 'ssh' | 'appearance' | 'terminal' | 'keybindings' | 'about'>(
-		'profiles'
-	);
+	let section = $state<
+		'general' | 'profiles' | 'ssh' | 'appearance' | 'terminal' | 'keybindings' | 'about'
+	>('general');
 	let detecting = $state(false);
 	let detectMessage = $state('');
 
@@ -159,22 +168,28 @@
 		onClose();
 	}
 
-	const NAV: { id: typeof section; label: string }[] = [
-		{ id: 'profiles', label: 'Profiles' },
-		{ id: 'ssh', label: 'SSH Connections' },
-		{ id: 'appearance', label: 'Appearance' },
-		{ id: 'terminal', label: 'Terminal' },
-		{ id: 'keybindings', label: 'Keybindings' },
-		{ id: 'about', label: 'About' }
+	const NAV: { id: typeof section; key: Parameters<typeof t>[0] }[] = [
+		{ id: 'general', key: 'nav_general' },
+		{ id: 'profiles', key: 'nav_profiles' },
+		{ id: 'ssh', key: 'nav_ssh' },
+		{ id: 'appearance', key: 'nav_appearance' },
+		{ id: 'terminal', key: 'nav_terminal' },
+		{ id: 'keybindings', key: 'nav_keybindings' },
+		{ id: 'about', key: 'nav_about' }
 	];
 
-	const KEYBIND_FIELDS: { field: keyof Keybindings; label: string }[] = [
-		{ field: 'new_tab', label: 'New tab' },
-		{ field: 'close_pane', label: 'Close pane / tab' },
-		{ field: 'split_right', label: 'Split right' },
-		{ field: 'split_down', label: 'Split down' },
-		{ field: 'quick_connect', label: 'Quick connect' },
-		{ field: 'open_settings', label: 'Open settings' }
+	const KEYBIND_FIELDS: { field: keyof Keybindings; key: Parameters<typeof t>[0] }[] = [
+		{ field: 'new_tab', key: 'kb_new_tab' },
+		{ field: 'close_pane', key: 'kb_close_pane' },
+		{ field: 'split_right', key: 'kb_split_right' },
+		{ field: 'split_down', key: 'kb_split_down' },
+		{ field: 'quick_connect', key: 'kb_quick_connect' },
+		{ field: 'open_settings', key: 'kb_open_settings' }
+	];
+
+	const LANGUAGES: { id: Language; label: string }[] = [
+		{ id: 'en', label: 'English' },
+		{ id: 'th', label: 'ไทย' }
 	];
 </script>
 
@@ -194,24 +209,33 @@
 		tabindex="-1"
 	>
 		<nav>
-			<h2>Settings</h2>
+			<h2>{t('settings_title')}</h2>
 			{#each NAV as item (item.id)}
 				<button class:active={section === item.id} onclick={() => (section = item.id)}>
-					{item.label}
+					{t(item.key)}
 				</button>
 			{/each}
 		</nav>
 
 		<div class="content">
-			{#if section === 'profiles'}
-				<h3>Local shell profiles</h3>
-				<input class="filter" bind:value={profileFilter} placeholder="Filter profiles…" />
+			{#if section === 'general'}
+				<label>
+					{t('language_label')}
+					<select bind:value={draft.language}>
+						{#each LANGUAGES as lang (lang.id)}
+							<option value={lang.id}>{lang.label}</option>
+						{/each}
+					</select>
+				</label>
+			{:else if section === 'profiles'}
+				<h3>{t('local_profiles')}</h3>
+				<input class="filter" bind:value={profileFilter} placeholder={t('filter_profiles')} />
 				{#each filteredProfiles as profile (profile.id)}
 					<details class="profile-card">
 						<summary>
-							<span class="profile-icon" style:color={profile.color}
-								>{profile.icon || '›_'}</span
-							>
+							<span class="profile-icon" style:color={profile.color}>
+								<IconGlyph icon={profile.icon} fallback="›_" />
+							</span>
 							<span class="profile-name">{profile.name}</span>
 							<span class="profile-sub">{profile.command}</span>
 							<span class="card-actions">
@@ -224,7 +248,7 @@
 										duplicateProfile(profile);
 									}}
 								>
-									Duplicate
+									{t('duplicate')}
 								</button>
 								<button
 									type="button"
@@ -235,7 +259,7 @@
 										removeProfile(profile.id);
 									}}
 								>
-									Remove
+									{t('remove')}
 								</button>
 							</span>
 						</summary>
@@ -246,7 +270,12 @@
 							<input bind:value={profile.group} placeholder="Group (optional)" />
 						</div>
 						<div class="row">
-							<input bind:value={profile.icon} placeholder="Icon (emoji)" class="narrow" />
+							<textarea
+								bind:value={profile.icon}
+								placeholder="Icon: emoji or pasted SVG markup"
+								class="icon-input"
+								rows="1"
+							></textarea>
 							<input type="color" bind:value={profile.color} class="narrow" />
 							<label class="checkbox">
 								<input type="checkbox" bind:checked={profile.close_on_exit} />
@@ -255,7 +284,7 @@
 						</div>
 						<div class="row">
 							<input bind:value={profile.cwd} placeholder="Working directory (optional)" />
-							<button type="button" onclick={() => browseCwd(profile)}>Browse…</button>
+							<button type="button" onclick={() => browseCwd(profile)}>{t('browse')}</button>
 						</div>
 						<div class="list-field">
 							<span class="list-label">Environment variables</span>
@@ -272,28 +301,28 @@
 									</button>
 								</div>
 							{/each}
-							<button type="button" onclick={() => addEnvVar(profile)}>+ Add variable</button>
+							<button type="button" onclick={() => addEnvVar(profile)}>{t('add_variable')}</button>
 						</div>
 					</details>
 				{/each}
 				<div class="row">
-					<button onclick={addProfile}>+ Add profile</button>
+					<button onclick={addProfile}>{t('add_profile')}</button>
 					<button onclick={detectShells} disabled={detecting}>
-						{detecting ? 'Detecting…' : '⟲ Detect installed shells'}
+						{detecting ? t('detecting') : `⟲ ${t('detect_shells')}`}
 					</button>
 				</div>
 				{#if detectMessage}
 					<p class="hint">{detectMessage}</p>
 				{/if}
 
-				<h3>Default profile for new tabs</h3>
+				<h3>{t('default_profile')}</h3>
 				<select bind:value={draft.default_profile_id}>
 					{#each draft.profiles as profile (profile.id)}
 						<option value={profile.id}>{profile.name}</option>
 					{/each}
 				</select>
 			{:else if section === 'ssh'}
-				<h3>From ~/.ssh/config</h3>
+				<h3>{t('from_ssh_config')}</h3>
 				{#if sshConfigLoading}
 					<p class="hint">Reading ~/.ssh/config…</p>
 				{:else if sshConfigHosts.length === 0}
@@ -313,27 +342,27 @@
 								onclick={() => importSshHost(host)}
 								disabled={isImported(host)}
 							>
-								{isImported(host) ? 'Imported' : '+ Import'}
+								{isImported(host) ? t('imported') : t('import')}
 							</button>
 						</div>
 					{/each}
 				{/if}
 
-				<h3>Your saved connections</h3>
-				<input class="filter" bind:value={sshFilter} placeholder="Filter connections…" />
+				<h3>{t('saved_connections')}</h3>
+				<input class="filter" bind:value={sshFilter} placeholder={t('filter_connections')} />
 				{#each filteredSshProfiles as profile (profile.id)}
 					<div class="ssh-card">
 						<div class="row">
-							<span class="profile-icon" style:color={profile.color}
-								>{profile.icon || '⇄'}</span
-							>
+							<span class="profile-icon" style:color={profile.color}>
+								<IconGlyph icon={profile.icon} fallback="⇄" />
+							</span>
 							<input bind:value={profile.name} placeholder="Name" />
 							<input bind:value={profile.group} placeholder="Group (optional)" />
 							<button type="button" class="ghost" onclick={() => duplicateSshProfile(profile)}>
-								Duplicate
+								{t('duplicate')}
 							</button>
 							<button type="button" class="danger" onclick={() => removeSshProfile(profile.id)}>
-								Remove
+								{t('remove')}
 							</button>
 						</div>
 						<div class="row">
@@ -354,16 +383,49 @@
 							</label>
 						</div>
 						<div class="row">
-							<input bind:value={profile.icon} placeholder="Icon (emoji)" class="narrow" />
+							<textarea
+								bind:value={profile.icon}
+								placeholder="Icon: emoji or pasted SVG markup"
+								class="icon-input"
+								rows="1"
+							></textarea>
 							<input type="color" bind:value={profile.color} class="narrow" />
 							<label class="checkbox">
 								<input type="checkbox" bind:checked={profile.close_on_exit} />
 								Close tab when connection ends
 							</label>
 						</div>
+						<div class="list-field">
+							<span class="list-label">{t('port_forward')}</span>
+							<div class="row">
+								<input
+									type="number"
+									bind:value={profile.local_port}
+									placeholder={t('local_port')}
+									class="narrow"
+								/>
+								<input bind:value={profile.remote_host} placeholder={t('remote_host')} />
+								<input
+									type="number"
+									bind:value={profile.remote_port}
+									placeholder={t('remote_port')}
+									class="narrow"
+								/>
+							</div>
+							<div class="row">
+								<label class="checkbox">
+									<input type="checkbox" bind:checked={profile.no_remote_command} />
+									{t('no_remote_command')}
+								</label>
+								<label class="checkbox">
+									<input type="checkbox" bind:checked={profile.verbose} />
+									{t('verbose')}
+								</label>
+							</div>
+						</div>
 					</div>
 				{/each}
-				<button onclick={addSshProfile}>+ Add SSH connection</button>
+				<button onclick={addSshProfile}>{t('add_ssh_connection')}</button>
 			{:else if section === 'appearance'}
 				<label>
 					Font family
@@ -419,9 +481,9 @@
 					Confirm before closing a tab with a running process
 				</label>
 			{:else if section === 'keybindings'}
-				{#each KEYBIND_FIELDS as { field, label } (field)}
+				{#each KEYBIND_FIELDS as { field, key } (field)}
 					<label>
-						{label}
+						{t(key)}
 						<input
 							readonly
 							value={draft.keybindings[field]}
@@ -436,7 +498,7 @@
 				<h3>Updates</h3>
 				<div class="row">
 					<button onclick={() => updateStore.check()} disabled={updateStore.status === 'checking'}>
-						{updateStore.status === 'checking' ? 'Checking…' : 'Check for updates'}
+						{updateStore.status === 'checking' ? t('checking') : t('check_updates')}
 					</button>
 					{#if updateStore.status === 'available'}
 						<button class="primary" onclick={() => updateStore.installAndRestart()}>
@@ -445,7 +507,7 @@
 					{/if}
 				</div>
 				{#if updateStore.status === 'up-to-date'}
-					<p class="hint">You're on the latest version.</p>
+					<p class="hint">{t('up_to_date')}</p>
 				{:else if updateStore.status === 'downloading'}
 					<p class="hint">Downloading… {Math.round(updateStore.progress * 100)}%</p>
 				{:else if updateStore.status === 'error'}
@@ -455,8 +517,8 @@
 		</div>
 
 		<div class="actions">
-			<button onclick={onClose}>Cancel</button>
-			<button class="primary" onclick={save}>Save</button>
+			<button onclick={onClose}>{t('cancel')}</button>
+			<button class="primary" onclick={save}>{t('save')}</button>
 		</div>
 	</div>
 </div>
@@ -559,13 +621,15 @@
 	}
 
 	input,
-	select {
+	select,
+	textarea {
 		background: var(--bg);
 		border: 1px solid var(--border);
 		border-radius: 6px;
 		color: var(--text);
 		padding: 4px 8px;
 		font-size: 13px;
+		font-family: inherit;
 	}
 
 	input[type='number'] {
@@ -574,6 +638,16 @@
 
 	input.narrow {
 		width: 70px;
+	}
+
+	.icon-input {
+		flex: 1;
+		min-width: 0;
+		resize: vertical;
+		min-height: 26px;
+		max-height: 90px;
+		font-family: 'Cascadia Code', Consolas, monospace;
+		font-size: 11px;
 	}
 
 	input[type='color'] {

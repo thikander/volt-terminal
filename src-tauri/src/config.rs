@@ -53,6 +53,21 @@ pub struct SshProfile {
     pub color: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub close_on_exit: Option<bool>,
+    /// Local port forward (`ssh -L local_port:remote_host:remote_port`) —
+    /// covers the "connect to a tunnel, not a shell" profiles people
+    /// otherwise keep as a copy-pasted command in a text file.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub local_port: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub remote_host: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub remote_port: Option<u16>,
+    /// `-N`: don't run a remote shell, just hold the forward open.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub no_remote_command: Option<bool>,
+    /// `-v`: verbose, useful while a tunnel isn't connecting.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub verbose: Option<bool>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -98,6 +113,12 @@ pub struct Settings {
     pub default_profile_id: String,
     #[serde(default)]
     pub keybindings: Keybindings,
+    #[serde(default = "default_language")]
+    pub language: String,
+}
+
+fn default_language() -> String {
+    "en".into()
 }
 
 impl Default for Settings {
@@ -121,6 +142,7 @@ impl Default for Settings {
             ssh_profiles: Vec::new(),
             default_profile_id,
             keybindings: Keybindings::default(),
+            language: default_language(),
         }
     }
 }

@@ -11,6 +11,8 @@
 		pushRecent,
 		type ConnectionTarget
 	} from '../connections';
+	import IconGlyph from './IconGlyph.svelte';
+	import { t as translate } from '../i18n';
 	import { settingsStore } from '../stores/settings.svelte';
 
 	let { onClose, onSelect }: { onClose: () => void; onSelect: (t: ConnectionTarget) => void } =
@@ -100,7 +102,7 @@
 		<input
 			bind:this={input}
 			bind:value={query}
-			placeholder="Select profile or enter an address"
+			placeholder={translate('quick_connect_placeholder')}
 			autocomplete="off"
 			spellcheck="false"
 		/>
@@ -115,7 +117,9 @@
 						onmouseenter={() => (selected = index)}
 						onclick={() => choose(item)}
 					>
-						<span class="icon" style:color={item.color}>{item.icon}</span>
+						<span class="icon" style:color={item.color}>
+							<IconGlyph icon={item.icon} />
+						</span>
 						<span class="label">{item.label}</span>
 						{#if item.subtitle}
 							<span class="subtitle">{item.subtitle}</span>
@@ -124,7 +128,7 @@
 				{/each}
 			{/each}
 			{#if filtered.length === 0}
-				<div class="empty">No matches — type a host to connect via SSH</div>
+				<div class="empty">{translate('no_matches')}</div>
 			{/if}
 		</div>
 	</div>
@@ -203,6 +207,9 @@
 	.icon {
 		font-size: 12px;
 		width: 18px;
+		flex-shrink: 0;
+		overflow: hidden;
+		white-space: nowrap;
 		text-align: center;
 		color: var(--accent);
 		font-family: monospace;

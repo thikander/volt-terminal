@@ -40,9 +40,16 @@ export function fromShellProfile(profile: ShellProfile): ConnectionTarget {
 
 export function fromSshProfile(profile: SshProfile): ConnectionTarget {
 	const address = profile.user ? `${profile.user}@${profile.host}` : profile.host;
-	const args = ['-p', String(profile.port ?? 22), address];
+	const args: string[] = [];
+	if (profile.verbose) args.push('-v');
 	if (profile.identity_file) args.push('-i', profile.identity_file);
+	args.push('-p', String(profile.port ?? 22));
+	if (profile.local_port && profile.remote_host && profile.remote_port) {
+		args.push('-L', `${profile.local_port}:${profile.remote_host}:${profile.remote_port}`);
+	}
+	if (profile.no_remote_command) args.push('-N');
 	if (profile.agent_forwarding) args.push('-A');
+	args.push(address);
 	const icon = profile.icon || DEFAULT_SSH_ICON;
 	return {
 		label: profile.name,
@@ -108,10 +115,23 @@ export function sshHostToProfile(host: SshHostEntry): SshProfile {
 const RECENTS_KEY = 'volt-terminal:recent-connections';
 const MAX_RECENTS = 8;
 
+/** A stray value from before icons were resolved glyphs/SVG (they used to
+ * be the literal string 'terminal' or 'ssh') would otherwise render as
+ * that raw word and visually overflow into the label next to it. */
+function sanitizeIcon(icon: unknown): string | undefined {
+	if (typeof icon !== 'string') return undefined;
+	if (icon.trim().startsWith('<svg')) return icon;
+	return icon.length <= 4 ? icon : undefined;
+}
+
 export function loadRecents(): ConnectionTarget[] {
 	try {
 		const raw = localStorage.getItem(RECENTS_KEY);
-		return raw ? JSON.parse(raw) : [];
+		const parsed = raw ? (JSON.parse(raw) as ConnectionTarget[]) : [];
+		return parsed.map((t) => ({
+			...t,
+			icon: sanitizeIcon(t.icon) ?? (t.icon === 'ssh' ? DEFAULT_SSH_ICON : DEFAULT_TERMINAL_ICON)
+		}));
 	} catch {
 		return [];
 	}

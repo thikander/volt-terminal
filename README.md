@@ -16,7 +16,8 @@ src-tauri/src/
                   one reader thread per session forwarding output as events
   config.rs       Settings, shell profiles, SSH profiles, keybindings —
                   persisted as JSON in the app config dir
-  ssh_config.rs   Parses ~/.ssh/config into connectable host entries
+  ssh_config.rs   Parses every reachable SSH config (user + system-wide,
+                  following Include directives/globs) into host entries
   shell_detect.rs Finds installed shells (PowerShell/cmd/Git Bash/WSL distros,
                   or /etc/shells) to seed profiles on first run
   native_chrome.rs Rounded corners + native drop shadow for the undecorated
@@ -31,6 +32,8 @@ src/lib/
                                 pty-exit events out to the owning pane by session id
   keys.ts                       Matches a KeyboardEvent against a "Ctrl+Shift+T"-style combo
   theme.ts                      xterm.js color theme
+  i18n.ts                       English/Thai string table + t(key), read reactively
+                                from the language setting
   stores/settings.svelte.ts     Settings state (Svelte 5 class + runes)
   stores/workspace.svelte.ts    Tabs + recursive split-pane tree, all mutations
   stores/window-state.svelte.ts Live focused/maximized state, shared by the
@@ -48,6 +51,8 @@ src/lib/
     SplitView.svelte             Recursive renderer for the split-pane tree,
                                   with draggable resize gutters
     TerminalPane.svelte          Owns one xterm.js instance + its PTY session
+    IconGlyph.svelte              Renders a profile's icon as text/emoji, or
+                                  as markup if it's pasted SVG
     SettingsModal.svelte         Multi-section settings (profiles, SSH, appearance,
                                   terminal, keybindings, about + update check)
     UpdateBanner.svelte           In-app banner when an update is available/downloading
@@ -135,14 +140,26 @@ config file only exists on whatever machine has it, so a saved profile is
 the thing that's actually portable, which matters if/when profiles become
 shareable across a team.
 
+Config scanning isn't limited to `~/.ssh/config`: it also checks the
+system-wide config (`/etc/ssh/ssh_config`, or `C:\ProgramData\ssh\ssh_config`
+on Windows) and follows every `Include` directive it finds (including glob
+patterns like `Include config.d/*`), the same way the real `ssh` client
+does — so hosts kept in a separate included file still show up.
+
+**SSH port forwarding** is a first-class profile, not just a shell command:
+set a local port, remote host, and remote port on a saved SSH connection
+(plus optionally "-N" to skip opening a shell, and "-v" for verbose) and
+Quick Connect opens the tunnel directly — no more keeping `ssh -L ...`
+commands in a text file to copy-paste.
+
 ## Profiles
 
 Both local shell profiles and SSH connections (Settings → Profiles /
 SSH Connections) support:
 
 - a **filter box** to search by name, command/host, or group
-- a custom **icon** (any emoji) and **color**, shown in the tab bar and
-  Quick Connect
+- a custom **icon** — either an emoji/short glyph, or pasted SVG markup — and
+  a **color**, shown in the tab bar and Quick Connect
 - **Duplicate**, not just Remove
 - **close the tab automatically when the process/connection ends**, instead
   of leaving a `[process exited]` message behind
@@ -154,6 +171,14 @@ Not built (out of scope for now, unlike some other terminal apps): an
 encrypted secrets vault, cloud config sync, a plugin system, and
 serial/Telnet connection types — these are much larger, separate features
 in their own right rather than natural extensions of profile editing.
+
+## Language
+
+Settings → General has an English/Thai toggle. Coverage is the app's chrome
+and Settings UI (nav, buttons, common labels, placeholders) — it's not yet
+exhaustive down to every hint string, and dynamically-built labels like
+Quick Connect's group names ("Recent", "Local", etc.) stay in English for
+now, tracked as a follow-up rather than silently left half-done.
 
 ## Keyboard shortcuts
 

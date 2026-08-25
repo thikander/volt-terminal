@@ -20,10 +20,11 @@
 		background: var(--bg);
 		color: var(--text);
 		font-family:
-			-apple-system,
-			BlinkMacSystemFont,
+			'Segoe UI Variable Text',
 			'Segoe UI',
+			system-ui,
 			sans-serif;
+		font-size: 13px;
 		overflow: hidden;
 	}
 
@@ -53,5 +54,10 @@
 
 	:global(button) {
 		font-family: inherit;
+		transition: filter 80ms ease;
+	}
+
+	:global(button:not(:disabled):active) {
+		filter: brightness(0.85);
 	}
 </style>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import TabBar from './TabBar.svelte';
 	import WindowControls from './WindowControls.svelte';
+	import { t } from '../i18n';
 	import { windowState } from '../stores/window-state.svelte';
 
 	let {
@@ -13,7 +14,7 @@
 <div class="title-bar" class:unfocused={!windowState.focused}>
 	<TabBar {onNewTab} {onQuickConnect} />
 	<div class="spacer" data-tauri-drag-region></div>
-	<button class="icon-btn" onclick={onOpenSettings} title="Settings (Ctrl+,)">⚙</button>
+	<button class="icon-btn" onclick={onOpenSettings} title={t('settings_tooltip')}>⚙</button>
 	<WindowControls />
 </div>
 

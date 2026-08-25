@@ -24,7 +24,8 @@ const fallback: Settings = {
 		split_down: 'Ctrl+Shift+D',
 		quick_connect: 'Ctrl+Shift+K',
 		open_settings: 'Ctrl+,'
-	}
+	},
+	language: 'en'
 };
 
 class SettingsStore {

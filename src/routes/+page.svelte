@@ -7,6 +7,7 @@
 	import ResizeHandles from '$lib/components/ResizeHandles.svelte';
 	import UpdateBanner from '$lib/components/UpdateBanner.svelte';
 	import { fromShellProfile, type ConnectionTarget } from '$lib/connections';
+	import { t } from '$lib/i18n';
 	import { matchesCombo } from '$lib/keys';
 	import { settingsStore } from '$lib/stores/settings.svelte';
 	import { updateStore } from '$lib/stores/update.svelte';
@@ -93,7 +94,7 @@
 				/>
 			</div>
 		{:else}
-			<div class="empty">No terminals open — press Ctrl+Shift+T to start one.</div>
+			<div class="empty">{t('empty_workspace')}</div>
 		{/each}
 	</div>
 </div>

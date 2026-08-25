@@ -28,7 +28,16 @@ export interface SshProfile {
 	icon?: string;
 	color?: string;
 	close_on_exit?: boolean;
+	/** Local port forward (`ssh -L local_port:remote_host:remote_port`) —
+	 * a profile that opens a tunnel rather than an interactive shell. */
+	local_port?: number;
+	remote_host?: string;
+	remote_port?: number;
+	no_remote_command?: boolean;
+	verbose?: boolean;
 }
+
+export type Language = 'en' | 'th';
 
 export interface DetectedShell {
 	name: string;
@@ -70,6 +79,7 @@ export interface Settings {
 	ssh_profiles: SshProfile[];
 	default_profile_id: string;
 	keybindings: Keybindings;
+	language: Language;
 }
 
 /** A fully-resolved command to run in a PTY — what a tab/pane actually spawns. */
