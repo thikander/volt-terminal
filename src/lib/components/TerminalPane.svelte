@@ -13,6 +13,7 @@
 
 	let { tabId, pane, active }: { tabId: string; pane: LeafPane; active: boolean } = $props();
 
+	let wrapper: HTMLDivElement;
 	let container: HTMLDivElement;
 	let term: Terminal;
 	let fitAddon: FitAddon;
@@ -60,7 +61,7 @@
 		}
 
 		if (settings.right_click_paste) {
-			container.addEventListener('contextmenu', async (e) => {
+			wrapper.addEventListener('contextmenu', async (e) => {
 				e.preventDefault();
 				const text = await readText().catch(() => '');
 				if (text) ptyBridge.write(sessionId, text);
@@ -68,7 +69,7 @@
 		}
 
 		resizeObserver = new ResizeObserver(() => fitAddon.fit());
-		resizeObserver.observe(container);
+		resizeObserver.observe(wrapper);
 
 		if (active) term.focus();
 	});
@@ -91,10 +92,12 @@
 	class="terminal-pane"
 	class:active
 	style:border-color={active ? (pane.spawn.color ?? 'var(--accent)') : undefined}
-	bind:this={container}
+	bind:this={wrapper}
 	onmousedown={() => workspace.setActivePane(tabId, pane.id)}
 	role="presentation"
-></div>
+>
+	<div class="terminal-inner" bind:this={container}></div>
+</div>
 
 <style>
 	.terminal-pane {
@@ -110,7 +113,16 @@
 		border-color: var(--accent);
 	}
 
-	.terminal-pane :global(.xterm) {
+	/* xterm attaches here, not on .terminal-pane directly: FitAddon measures
+	   this element's own clientWidth, so it must have no padding of its own
+	   or it miscounts columns by the padding amount and the overflow gets
+	   clipped at the edge. */
+	.terminal-inner {
+		width: 100%;
+		height: 100%;
+	}
+
+	.terminal-inner :global(.xterm) {
 		height: 100%;
 	}
 </style>

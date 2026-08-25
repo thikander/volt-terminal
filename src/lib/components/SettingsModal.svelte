@@ -294,11 +294,6 @@
 				</select>
 			{:else if section === 'ssh'}
 				<h3>From ~/.ssh/config</h3>
-				<p class="hint">
-					Import a host to save it as its own connection here — editable, groupable, and
-					independent of that file from then on (this is what will make sharing connections with
-					a team possible later, since the config file itself never leaves your machine).
-				</p>
 				{#if sshConfigLoading}
 					<p class="hint">Reading ~/.ssh/config…</p>
 				{:else if sshConfigHosts.length === 0}
@@ -398,7 +393,6 @@
 					Background opacity
 					<input type="range" min="0.4" max="1" step="0.05" bind:value={draft.background_opacity} />
 				</label>
-				<p class="hint">Blends the terminal panel toward black — not a see-through desktop effect.</p>
 			{:else if section === 'terminal'}
 				<label>
 					Scrollback lines
@@ -651,6 +645,7 @@
 		color: var(--text-dim);
 		font-size: 11px;
 		flex: 1;
+		min-width: 0;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;

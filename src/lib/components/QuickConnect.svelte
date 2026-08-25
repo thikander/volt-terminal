@@ -214,6 +214,7 @@
 
 	.label {
 		flex: 1;
+		min-width: 0;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -222,6 +223,11 @@
 	.subtitle {
 		color: var(--text-dim);
 		font-size: 12px;
+		flex-shrink: 0;
+		max-width: 45%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.empty {
